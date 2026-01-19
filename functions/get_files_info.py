@@ -1,6 +1,4 @@
 import os
-from prompts import system_prompt
-from dotenv import load_dotenv
 from google.genai import types
 
 schema_get_files_info = types.FunctionDeclaration(
