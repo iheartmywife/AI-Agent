@@ -24,32 +24,45 @@ def main():
 
     print("Hello from aiagent!")
     try:
-        response = client.models.generate_content(
-        model='gemini-2.5-flash', 
-        contents= messages,
-        config=types.GenerateContentConfig(
-            tools=[available_functions], system_instruction=system_prompt),
-        )
-        if args.verbose and response.usage_metadata is not None:
-            print(f'User prompt: {args.user_prompt}')
-            print(f'Prompt tokens: {response.usage_metadata.prompt_token_count}')
-            print(f'Response tokens: {response.usage_metadata.candidates_token_count}')
-        
-        if response.function_calls:
-            function_results = []
-            for function_call in response.function_calls:
-                function_call_result = call_function(function_call, args.verbose)
-                if len(function_call_result.parts) < 1:
-                    raise Exception
-                if not function_call_result.parts[0].function_response:
-                    raise Exception
-                if not function_call_result.parts[0].function_response.response:
-                    raise Exception
-                function_results.append(function_call_result.parts[0])
-                if args.verbose:
-                    print(f"-> {function_call_result.parts[0].function_response.response}")
-        else:
-            print(response.text)
+        i = 0
+        for i in range(20):
+            response = client.models.generate_content(
+                model='gemini-2.5-flash', 
+                contents= messages,
+                config=types.GenerateContentConfig(
+                    tools=[available_functions], system_instruction=system_prompt),
+            )
+            if len(response.candidates) > 0:
+                for candidate in response.candidates:
+                    messages.append(candidate.content)
+
+
+            if args.verbose and response.usage_metadata is not None:
+                print(f'User prompt: {args.user_prompt}')
+                print(f'Prompt tokens: {response.usage_metadata.prompt_token_count}')
+                print(f'Response tokens: {response.usage_metadata.candidates_token_count}')
+            
+            if response.function_calls:
+                function_results = []
+                for function_call in response.function_calls:
+                    function_call_result = call_function(function_call, args.verbose)
+                    if len(function_call_result.parts) < 1:
+                        raise Exception
+                    if not function_call_result.parts[0].function_response:
+                        raise Exception
+                    if not function_call_result.parts[0].function_response.response:
+                        raise Exception
+                    function_results.append(function_call_result.parts[0])
+                    if args.verbose:
+                        print(f"-> {function_call_result.parts[0].function_response.response}")        
+                messages.append(types.Content(role="user", parts=function_results))
+                i += 1
+            else:
+                print(response.text)
+                break
+        if i >= 20:
+            print(f"model failed to produce a final result")
+            sys.exit(1)
     except Exception as e:
         print(f"Error: {e}")
         return
